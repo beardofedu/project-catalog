@@ -1,0 +1,45 @@
+name: Publish Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Primer CSS
+        run: npm install --no-save --no-package-lock --ignore-scripts @primer/css@22.1.0 @primer/primitives@11.3.1
+      - name: Stage site
+        run: |
+          mkdir -p _site/assets
+          cp index.html styles.css _site/
+          cp node_modules/@primer/css/dist/primer.css _site/assets/primer.css
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
